@@ -1,20 +1,16 @@
 "use server";
 
 import { Firestore } from "@google-cloud/firestore";
+import { GroceryItem } from "@/types";
 
 type listItem = {
   name: string;
   category: string;
 };
 
-type groceryItem = {
-  name: string;
-  category: string;
-  inStock: boolean;
-};
 
 const db = new Firestore({
-  projectId: "ct-dev-playground",
+  projectId: process.env.PROJECT_ID,
 });
 
 export async function createCategories() {
@@ -82,19 +78,19 @@ export async function createGroceryItems() {
   }
 }
 
-export async function getGroceryItems(): Promise<groceryItem[]> {
+export async function getGroceryItems(): Promise<GroceryItem[]> {
   console.log("Getting grocery items ");
 
   const snapshot = await db.collection("groceryItems").get();
   const items = snapshot.docs.map((doc) => doc.data());
   console.log("Grocery items: ", items);
-  return items as groceryItem[];
+  return items as GroceryItem[];
 }
 
 export async function getGroceryItemsGroupedByCategory(): Promise<
-  Record<string, groceryItem[]>
+  Record<string, GroceryItem[]>
 > {
-  const groupedItems: Record<string, groceryItem[]> = {};
+  const groupedItems: Record<string, GroceryItem[]> = {};
 
   const groceryItems = await getGroceryItems();
   for (const item of groceryItems) {
@@ -107,12 +103,12 @@ export async function getGroceryItemsGroupedByCategory(): Promise<
   return groupedItems;
 }
 
-export async function updateGroceryItem(id: string, inStock: boolean) {
-  console.log(`Updating grocery item ${id} to inStock: ${inStock}`);
-
-  const docRef = db.collection("groceryItems").doc(id);
-  await docRef.update({ inStock });
-  console.log(`Grocery item ${id} updated to inStock: ${inStock}`);
+export async function updateGroceryItem(item: GroceryItem) {
+    console.log(`Updating grocery item ${item.name}`);
+    
+    const docRef = db.collection("groceryItems").doc(item.name);
+    await docRef.set(item);
+    console.log(`Grocery item ${item.name} updated`);
 }
 
 export async function addGroceryItemToShoppingList(item: listItem) {
