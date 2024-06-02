@@ -7,10 +7,8 @@ import { GroceryItem } from "@/types";
 import AccordionTrigger from "../components/AccordionTrigger";
 import GorceryItem from "../components/Item";
 import * as Checkbox from "@radix-ui/react-checkbox";
-import { CheckIcon, ListBulletIcon } from "@radix-ui/react-icons";
-import {
-  updateGroceryItem as updateGroceryItemInInventory,
-} from "@/repository/inventory";
+import { CheckIcon, ListBulletIcon, EyeOpenIcon, EyeClosedIcon } from "@radix-ui/react-icons";
+import { updateGroceryItem as updateGroceryItemInInventory } from "@/repository/inventory";
 
 type Groceries = Record<string, GroceryItem[]>;
 
@@ -63,6 +61,7 @@ const ItemActions = ({
 
 export default function CategoryItems({ groceries }: CategoryProps) {
   const [items, setItems] = useState<Groceries>(groceries);
+  const [listView, setListView] = useState(false);
 
   const updateGroceryItem = (updatedItem: GroceryItem) => {
     const updatedItems = { ...items } as Groceries;
@@ -79,7 +78,7 @@ export default function CategoryItems({ groceries }: CategoryProps) {
   };
 
   return (
-    <>
+    <div>
       <Accordion.Root className="w-full bg-blue-50" type="single" collapsible>
         {Object.entries(items).map(([category, categoryItems]) => (
           <Accordion.Item value={category} key={category} className="w-full">
@@ -89,12 +88,14 @@ export default function CategoryItems({ groceries }: CategoryProps) {
                 <Accordion.Root type="single" collapsible>
                   {categoryItems.map((item) => (
                     <li key={item.name} className="w-full">
-                      <GorceryItem label={item.name}>
-                        <ItemActions
-                          item={item}
-                          updateGroceryItem={updateGroceryItem}
-                        />
-                      </GorceryItem>
+                      {(!listView || (listView && item.onList)) && (
+                        <GorceryItem label={item.name}>
+                          <ItemActions
+                            item={item}
+                            updateGroceryItem={updateGroceryItem}
+                          />
+                        </GorceryItem>
+                      )}
                     </li>
                   ))}
                 </Accordion.Root>
@@ -103,6 +104,22 @@ export default function CategoryItems({ groceries }: CategoryProps) {
           </Accordion.Item>
         ))}
       </Accordion.Root>
-    </>
+      {listView && (
+         <button
+         onClick={() => setListView(!listView)}
+         className="flex fixed bottom-0 items-center justify-center p-5 w-full text-blue-500 bg-white"
+       >
+         <EyeClosedIcon width="40" height="40" />
+       </button>
+      )}
+      {!listView && (
+         <button
+         onClick={() => setListView(!listView)}
+         className="flex fixed bottom-0 items-center justify-center p-5 w-full text-blue-500 bg-white"
+       >
+         <EyeOpenIcon width="40" height="40" />
+       </button>
+      )}
+    </div>
   );
 }
