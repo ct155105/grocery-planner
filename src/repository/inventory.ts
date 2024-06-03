@@ -8,9 +8,15 @@ type listItem = {
   category: string;
 };
 
+console.log(process.env.CLIENT_EMAIL);
+console.log(process.env.PRIVATE_KEY);
 
 const db = new Firestore({
   projectId: process.env.PROJECT_ID,
+  credentials: {
+    client_email: process.env.CLIENT_EMAIL,
+    private_key: process.env.PRIVATE_KEY,
+  },
 });
 
 export async function createCategories() {
