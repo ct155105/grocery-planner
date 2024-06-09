@@ -2,6 +2,7 @@
 
 import { Firestore } from "@google-cloud/firestore";
 import { GroceryItem } from "@/types";
+import { cookies } from "next/headers";
 
 type listItem = {
   name: string;
@@ -83,6 +84,7 @@ export async function createGroceryItems() {
 
 export async function getGroceryItems(): Promise<GroceryItem[]> {
   console.log("Getting grocery items ");
+  const _cookies = cookies()
 
   const snapshot = await db.collection("groceryItems").get();
   const items = snapshot.docs.map((doc) => doc.data());
