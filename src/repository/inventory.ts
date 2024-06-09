@@ -77,7 +77,7 @@ export async function createGroceryItems() {
   ];
 
   for (const item of groceryItems) {
-    const docRef = await db.collection("groceryItems").doc(item.name);
+    const docRef = db.collection("groceryItems").doc(item.name);
     await docRef.set(item);
   }
 }
@@ -114,6 +114,14 @@ export async function updateGroceryItem(item: GroceryItem) {
     const docRef = db.collection("groceryItems").doc(item.name);
     await docRef.set(item);
     console.log(`Grocery item ${item.name} updated`);
+}
+
+export async function deleteGroceryItem(item: GroceryItem) {
+  console.log(`Deleting grocery item ${item.name}`);
+
+  const docRef = db.collection("groceryItems").doc(item.name);
+  await docRef.delete();
+  console.log(`Grocery item ${item.name} deleted`);
 }
 
 export async function addGroceryItemToShoppingList(item: listItem) {
