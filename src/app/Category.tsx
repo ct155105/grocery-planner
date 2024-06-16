@@ -18,6 +18,7 @@ import {
   deleteGroceryItem as deleteGroceryItemInInventory,
 } from "@/repository/inventory";
 import { IconProps } from "@radix-ui/react-icons/dist/types";
+import { list } from "postcss";
 
 type Groceries = Record<string, GroceryItem[]>;
 
@@ -123,6 +124,7 @@ export default function CategoryItems({ groceries }: CategoryProps) {
     const updatedItems = { ...items } as Groceries;
     updatedItems[updatedItem.category].push(updatedItem);
     setItems(updatedItems);
+    setNewItem("");
     updateGroceryItemInInventory(updatedItem);
   };
 
@@ -149,9 +151,33 @@ export default function CategoryItems({ groceries }: CategoryProps) {
     deleteGroceryItemInInventory(item);
   };
 
+  type SingleAccordionProps = {
+    type: "single";
+    collapsible: true;
+  }  
+
+  type MultipleAccordionProps = {
+    type: "multiple";
+    defaultValue: string[];
+  }
+  
+  const getAccordionProps = (listView: boolean, items: Record<string, any[]>): SingleAccordionProps | MultipleAccordionProps => {
+    if (listView) {
+      return {
+        type: "multiple",
+        defaultValue: Object.keys(items),
+      };
+    } else {
+      return {
+        type: "single",
+        collapsible: true,
+      };
+    }
+  };
+
   return (
     <div>
-      <Accordion.Root className="w-full bg-blue-50" type="single" collapsible>
+      <Accordion.Root className="w-full bg-blue-50" {...getAccordionProps(listView, items)} >
         {Object.entries(items).map(([category, categoryItems]) => (
           <Accordion.Item value={category} key={category} className="w-full">
             <AccordionTrigger label={category} />
@@ -173,29 +199,31 @@ export default function CategoryItems({ groceries }: CategoryProps) {
                   </li>
                 ))}
               </ul>
-              <div className="flex bg-gradient-to-tr from-white from-50% to-blue-500 text-slate-950 items-center p-5">
-                <input
-                  type="text"
-                  placeholder="Add new item"
-                  className="flex-grow border border-blue-900 rounded-[4px] p-2 mr-14"
-                  value={newItem}
-                  onChange={(e) => setNewItem(e.target.value)}
-                />
-                <button className="ml-auto bg-blue-500 text-white flex h-[40px] w-[40px] items-center justify-center rounded-[4px] border border-blue-900 shadow-lg">
-                  <PlusIcon
-                    width="30"
-                    height="30"
-                    onClick={() => {
-                      addGroceryItem({
-                        name: newItem,
-                        category: category,
-                        inStock: false,
-                        onList: false,
-                      });
-                    }}
+              {!listView && (
+                <div className="flex bg-gradient-to-tr from-white from-50% to-blue-500 text-slate-950 items-center p-5">
+                  <input
+                    type="text"
+                    placeholder="Add new item"
+                    className="flex-grow border border-blue-900 rounded-[4px] p-2 mr-14"
+                    value={newItem}
+                    onChange={(e) => setNewItem(e.target.value)}
                   />
-                </button>
-              </div>
+                  <button className="ml-auto bg-blue-500 text-white flex h-[40px] w-[40px] items-center justify-center rounded-[4px] border border-blue-900 shadow-lg">
+                    <PlusIcon
+                      width="30"
+                      height="30"
+                      onClick={() => {
+                        addGroceryItem({
+                          name: newItem,
+                          category: category,
+                          inStock: false,
+                          onList: false,
+                        });
+                      }}
+                    />
+                  </button>
+                </div>
+              )}
             </Accordion.Content>
           </Accordion.Item>
         ))}
