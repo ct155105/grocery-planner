@@ -2,90 +2,33 @@
 
 import React from "react";
 import * as Accordion from "@radix-ui/react-accordion";
+import * as Dialog from "@radix-ui/react-dialog";
 import { useState } from "react";
 import { GroceryItem } from "@/types";
 import AccordionTrigger from "./components/AccordionTrigger";
 import GorceryItem from "./components/Item";
-import * as Checkbox from "@radix-ui/react-checkbox";
+import ItemActions from "./components/ItemActions";
 import {
   CheckIcon,
   ListBulletIcon,
   PlusIcon,
   TrashIcon,
+  MagicWandIcon,
+  DotsHorizontalIcon,
 } from "@radix-ui/react-icons";
 import {
   updateGroceryItem as updateGroceryItemInInventory,
   deleteGroceryItem as deleteGroceryItemInInventory,
+  getInStockItems,
 } from "@/repository/inventory";
 import { IconProps } from "@radix-ui/react-icons/dist/types";
-import { list } from "postcss";
+import { getCompletion } from "@/lib/llm";
 
 type Groceries = Record<string, GroceryItem[]>;
 
 type CategoryProps = {
   groceries: Groceries;
-};
-
-const ItemActions = ({
-  item,
-  updateGroceryItem,
-  deleteGroceryItem,
-  deleteView,
-}: {
-  item: GroceryItem;
-  updateGroceryItem: (item: GroceryItem) => void;
-  deleteGroceryItem: (item: GroceryItem) => void;
-  deleteView?: boolean;
-}) => {
-  return (
-    <div className="flex items-center">
-      {!deleteView && (
-        <>
-          <Checkbox.Root
-            className="flex h-[40px] w-[40px] items-center justify-center rounded-[4px] border border-blue-900 data-[state=checked]:bg-blue-500 shadow-lg"
-            defaultChecked={item.inStock}
-            onCheckedChange={() => {
-              const updatedItem = {
-                ...item,
-                inStock: !item.inStock,
-              };
-              updateGroceryItem(updatedItem);
-            }}
-          >
-            <Checkbox.Indicator className="text-white bg-blue-500">
-              <CheckIcon />
-            </Checkbox.Indicator>
-          </Checkbox.Root>
-          <Checkbox.Root
-            className="flex h-[40px] w-[40px] items-center justify-center rounded-[4px] border border-blue-900 data-[state=checked]:bg-blue-500 shadow-lg ml-2"
-            defaultChecked={item.onList}
-            onCheckedChange={() => {
-              const updatedItem = {
-                ...item,
-                onList: !item.onList,
-              };
-              updateGroceryItem(updatedItem);
-            }}
-          >
-            <Checkbox.Indicator className="text-white bg-blue-500">
-              <ListBulletIcon width="30" height="30" />
-            </Checkbox.Indicator>
-          </Checkbox.Root>
-        </>
-      )}
-      {deleteView && (
-        <button className="bg-red-500 text-white flex h-[40px] w-[40px] items-center justify-center rounded-[4px] border border-blue-900 shadow-lg">
-          <TrashIcon
-            width="30"
-            height="30"
-            onClick={() => {
-              deleteGroceryItem(item);
-            }}
-          />
-        </button>
-      )}
-    </div>
-  );
+  mealIdeaGenerator: (prompt: string) => Promise<string | null>;
 };
 
 const FilterButton = ({
@@ -113,12 +56,18 @@ const FilterButton = ({
   </button>
 );
 
-export default function CategoryItems({ groceries }: CategoryProps) {
+export default function CategoryItems({
+  groceries,
+  mealIdeaGenerator,
+}: CategoryProps) {
   const [items, setItems] = useState<Groceries>(groceries);
   const [listView, setListView] = useState(false);
   const [inStockView, setInStockView] = useState(false);
   const [deleteView, setDeleteView] = useState(false);
   const [newItem, setNewItem] = useState("");
+  const [gettingMealIdea, setGettingMealIdea] = useState(false);
+  const [mealIdea, setMealIdea] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const addGroceryItem = (updatedItem: GroceryItem) => {
     const updatedItems = { ...items } as Groceries;
@@ -151,17 +100,32 @@ export default function CategoryItems({ groceries }: CategoryProps) {
     deleteGroceryItemInInventory(item);
   };
 
+  const generateMealIdea = async () => {
+    setGettingMealIdea(true);
+    const inStockItems = await getInStockItems();
+    const completion = await getCompletion(
+      inStockItems.map((item) => item.name).join(", ")
+    );
+    setMealIdea(completion ?? "No meal idea found");
+    setDialogOpen(true);
+    setGettingMealIdea(false);
+    return completion;
+  };
+
   type SingleAccordionProps = {
     type: "single";
     collapsible: true;
-  }  
+  };
 
   type MultipleAccordionProps = {
     type: "multiple";
     defaultValue: string[];
-  }
-  
-  const getAccordionProps = (listView: boolean, items: Record<string, any[]>): SingleAccordionProps | MultipleAccordionProps => {
+  };
+
+  const getAccordionProps = (
+    listView: boolean,
+    items: Record<string, any[]>
+  ): SingleAccordionProps | MultipleAccordionProps => {
     if (listView) {
       return {
         type: "multiple",
@@ -177,7 +141,10 @@ export default function CategoryItems({ groceries }: CategoryProps) {
 
   return (
     <div>
-      <Accordion.Root className="w-full bg-blue-50" {...getAccordionProps(listView, items)} >
+      <Accordion.Root
+        className="w-full bg-blue-50"
+        {...getAccordionProps(listView, items)}
+      >
         {Object.entries(items).map(([category, categoryItems]) => (
           <Accordion.Item value={category} key={category} className="w-full">
             <AccordionTrigger label={category} />
@@ -250,7 +217,49 @@ export default function CategoryItems({ groceries }: CategoryProps) {
           inactiveColor="bg-white text-blue-500"
           Icon={TrashIcon}
         />
+        <FilterButton
+          onClick={generateMealIdea}
+          active={false}
+          activeColor="bg-red-500 text-white"
+          inactiveColor="bg-white text-blue-500"
+          Icon={gettingMealIdea ? DotsHorizontalIcon : MagicWandIcon}
+        />
       </div>
+      <Dialog.Root open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed top-0 bottom-0 left-0 right-0 overflow-y-auto">
+            <Dialog.Content className="rounded-[6px] bg-white p-[25px]">
+              <Dialog.Title className="text-mauve12 m-0 text-[17px] font-medium">
+                Meal Ideas
+              </Dialog.Title>
+              <Dialog.Description className="text-mauve11 mt-[10px] mb-5 text-[15px] leading-normal">
+                Here are some meal ideas based on the items we have in stock:
+              </Dialog.Description>
+              <div>
+                {mealIdea.split(/\d+\./).map((recipe) => (
+                  <div key={recipe} className="p-3">{recipe}</div>
+                ))}
+              </div>
+
+              <div className="mt-[25px] flex justify-end">
+                <Dialog.Close asChild>
+                  <button className="bg-green4 text-green11 hover:bg-green5 focus:shadow-green7 inline-flex h-[35px] items-center justify-center rounded-[4px] px-[15px] font-medium leading-none focus:shadow-[0_0_0_2px] focus:outline-none">
+                    Close
+                  </button>
+                </Dialog.Close>
+              </div>
+              <Dialog.Close asChild>
+                <button
+                  className="text-violet11 hover:bg-violet4 focus:shadow-violet7 absolute top-[10px] right-[10px] inline-flex h-[25px] w-[25px] appearance-none items-center justify-center rounded-full focus:shadow-[0_0_0_2px] focus:outline-none"
+                  aria-label="Close"
+                >
+                  X
+                </button>
+              </Dialog.Close>
+            </Dialog.Content>
+          </Dialog.Overlay>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }

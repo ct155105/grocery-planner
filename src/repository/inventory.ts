@@ -108,6 +108,15 @@ export async function getGroceryItemsGroupedByCategory(): Promise<
   return groupedItems;
 }
 
+export async function getInStockItems(): Promise<GroceryItem[]> {
+  console.log("Getting in stock items");
+
+  const snapshot = await db.collection("groceryItems").where("inStock", "==", true).get();
+  const items = snapshot.docs.map((doc) => doc.data());
+  console.log("In stock items: ", items);
+  return items as GroceryItem[];
+}
+
 export async function updateGroceryItem(item: GroceryItem) {
     console.log(`Updating grocery item ${item.name}`);
     
